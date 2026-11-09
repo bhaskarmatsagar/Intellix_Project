@@ -1,0 +1,29 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment configurations and secrets
+.env
+*.env
+*.env.local
+
+# Temporary files, backups and dumps
+*.bak
+*.crdownload
+*.log
+_audit/
+_review_dump/
+_backup_before_fix/
+node_modules/
+
+# OS metadata
+.DS_Store
+Thumbs.db

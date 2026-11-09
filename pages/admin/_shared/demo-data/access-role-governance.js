@@ -1,0 +1,127 @@
+/**
+ * Demo data for Platform Access & Role Governance
+ * Dates around 5 Oct 2026. Strictly ASCII-only.
+ */
+
+export const ACCESS_ROLE_GOVERNANCE_DEMO = [
+  {
+    id: 'ACC-101',
+    principal: 'alex.chen@edx-platform.net',
+    display_name: 'Alex Chen',
+    role: 'Platform Admin',
+    scope: 'Global Control Plane',
+    grant_type: 'Standing',
+    granted_by: 'sec-ops-lead@edx-platform.net',
+    last_review: '2026-09-15T10:00:00Z',
+    review_status: 'Current',
+    mfa: 'Yes',
+    department: 'Platform Reliability & Security',
+    jit_ticket: null,
+    jit_expires: null
+  },
+  {
+    id: 'ACC-102',
+    principal: 'maria.gonzalez@edx-platform.net',
+    display_name: 'Maria Gonzalez',
+    role: 'Platform Admin',
+    scope: 'Global Control Plane',
+    grant_type: 'Just-in-time',
+    granted_by: 'alex.chen@edx-platform.net',
+    last_review: '2026-10-04T08:30:00Z',
+    review_status: 'Current',
+    mfa: 'Yes',
+    department: 'Core Infrastructure Ops',
+    jit_ticket: 'CHG-2610-014',
+    jit_expires: '2026-10-05T20:00:00Z'
+  },
+  {
+    id: 'ACC-103',
+    principal: 'sarah.jenkins@springfield-k12.org',
+    display_name: 'Dr. Sarah Jenkins',
+    role: 'Steward',
+    scope: 'Tenant: TEN-1001',
+    grant_type: 'Standing',
+    granted_by: 'tenant-onboarding@edx-platform.net',
+    last_review: '2026-06-12T14:00:00Z',
+    review_status: 'Overdue',
+    mfa: 'Yes',
+    department: 'District Accountability Office',
+    jit_ticket: null,
+    jit_expires: null
+  },
+  {
+    id: 'ACC-104',
+    principal: 'marcus.vance@metro-state.edu',
+    display_name: 'Marcus Vance',
+    role: 'Steward',
+    scope: 'Tenant: TEN-1002',
+    grant_type: 'Standing',
+    granted_by: 'tenant-onboarding@edx-platform.net',
+    last_review: '2026-08-20T09:15:00Z',
+    review_status: 'Due',
+    mfa: 'Yes',
+    department: 'University Institutional Research',
+    jit_ticket: null,
+    jit_expires: null
+  },
+  {
+    id: 'ACC-105',
+    principal: 'dave.miller@contractor.edx-platform.net',
+    display_name: 'Dave Miller (Contractor)',
+    role: 'Engineer',
+    scope: 'Ingestion Pipelines & Mappings',
+    grant_type: 'Just-in-time',
+    granted_by: 'alex.chen@edx-platform.net',
+    last_review: '2026-10-01T11:00:00Z',
+    review_status: 'Current',
+    mfa: 'Yes',
+    department: 'Data Pipeline Engineering',
+    jit_ticket: 'INC-261005-07',
+    jit_expires: '2026-10-06T12:00:00Z'
+  },
+  {
+    id: 'ACC-106',
+    principal: 'external-auditor@deloitte-audit.com',
+    display_name: 'Rachel Adams',
+    role: 'Auditor',
+    scope: 'Global Read-Only Assurance',
+    grant_type: 'Standing',
+    granted_by: 'chief-compliance@edx-platform.net',
+    last_review: '2026-09-01T16:00:00Z',
+    review_status: 'Current',
+    mfa: 'Yes',
+    department: 'External Compliance Assurance',
+    jit_ticket: null,
+    jit_expires: null
+  },
+  {
+    id: 'ACC-107',
+    principal: 'legacy-service-account@service.edx.internal',
+    display_name: 'Legacy Batch Service Principal',
+    role: 'Engineer',
+    scope: 'Data Warehouse Direct Read',
+    grant_type: 'Standing',
+    granted_by: 'system',
+    last_review: '2026-05-10T12:00:00Z',
+    review_status: 'Overdue',
+    mfa: 'No',
+    department: 'System Integration Service Account',
+    jit_ticket: null,
+    jit_expires: null
+  },
+  {
+    id: 'ACC-108',
+    principal: 'research-team@state-research-council.org',
+    display_name: 'State Research Council',
+    role: 'Consumer',
+    scope: 'Published Longitudinal Cohorts',
+    grant_type: 'Standing',
+    granted_by: 'data-steward@dese.state.gov',
+    last_review: '2026-09-28T13:45:00Z',
+    review_status: 'Current',
+    mfa: 'Yes',
+    department: 'Educational Policy Research',
+    jit_ticket: null,
+    jit_expires: null
+  }
+];

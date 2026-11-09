@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SLO Monitoring — Live Backend Viewer</title>
+<style>
+  :root{--navy:#132a46;--teal:#0f766e;--border:#d9e2ec;--soft:#f4f7fa;color-scheme:light}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:#f7f9fb;color:#1f2937}
+  header{background:var(--navy);color:#fff;padding:.9rem 1.2rem;display:flex;gap:1rem;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  header h1{font-size:1.1rem;margin:0}
+  header small{opacity:.8}
+  main{padding:1rem 1.2rem;max-width:1500px;margin:0 auto}
+  .bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+  .bar select,.bar button{padding:.35rem .6rem;border:1px solid #94a3b8;border-radius:.4rem;background:#fff;font:inherit;cursor:pointer}
+  .badge{display:inline-block;padding:.15rem .6rem;border-radius:999px;font-weight:600;font-size:.78rem}
+  .ok{background:#dcfce7;color:#166534}.bad{background:#ffe4e6;color:#9f1239}.warn{background:#fef3c7;color:#92400e}
+  .info{background:#dbeafe;color:#1e40af}.neutral{background:#e2e8f0;color:#334155}
+  section{background:#fff;border:1px solid var(--border);border-radius:.6rem;margin:1rem 0;overflow:hidden}
+  section>h2{font-size:.95rem;margin:0;padding:.65rem .9rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  section>h2 code{font-weight:400;color:#475569;font-size:.8rem}
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:.85rem}
+  th,td{padding:.4rem .6rem;border-bottom:1px solid #eef2f6;text-align:left;white-space:nowrap}
+  th{background:var(--soft);font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;color:#64748b}
+  td.wrap{white-space:normal;min-width:220px}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.6rem;padding:.8rem .9rem}
+  .fact{border:1px solid var(--border);border-radius:.5rem;padding:.5rem .7rem;background:var(--soft)}
+  .fact b{display:block;font-size:.72rem;text-transform:uppercase;color:#64748b;letter-spacing:.03em}
+  .fact span{font-size:1.05rem;font-weight:700;color:var(--navy);overflow-wrap:anywhere}
+  .err{background:#ffe4e6;color:#9f1239;border:1px solid #fecdd3;padding:.7rem 1rem;border-radius:.5rem;margin:1rem 0;display:none}
+  .flash{animation:flash 2.5s ease-out}
+  @keyframes flash{0%{background:#fde047;box-shadow:0 0 0 2px #eab308 inset}100%{background:transparent;box-shadow:none}}
+  pre{margin:0;padding:.8rem .9rem;background:#0f172a;color:#e2e8f0;overflow-x:auto;font-size:.8rem}
+  .how{padding:.8rem .9rem;font-size:.88rem}
+  .how ol{margin:.3rem 0 .6rem 1.2rem;padding:0}
+  .muted{color:#64748b}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>SLO Monitoring — Live Backend Viewer</h1><small>Every value below is fetched from the API, which reads MySQL. Nothing is hard-coded in this page.</small></div>
+  <div class="bar">
+    <span id="conn" class="badge neutral">connecting…</span>
+    <label>Auto-refresh
+      <select id="interval"><option value="0">off</option><option value="3000" selected>every 3 s</option><option value="10000">every 10 s</option></select>
+    </label>
+    <button id="refresh">Refresh now</button>
+    <span class="muted" id="stamp" style="color:#cbd5e1"></span>
+  </div>
+</header>
+<main>
+  <div class="err" id="err"></div>
+
+  <section>
+    <h2>Connection &amp; row counts <code>GET /api/health</code></h2>
+    <div class="facts" id="health"></div>
+  </section>
+
+  <section>
+    <h2>SLOs (definition + latest measurement) <code>GET /api/slos</code></h2>
+    <div class="scroll"><table id="slos"></table></div>
+  </section>
+
+  <section>
+    <h2>Follow-up register <code>GET /api/followups</code></h2>
+    <div class="scroll"><table id="followups"></table></div>
+  </section>
+
+  <section>
+    <h2>Governance decision history (latest 15) <code>GET /api/governance-history?limit=15</code></h2>
+    <div class="scroll"><table id="history"></table></div>
+  </section>
+
+  <section>
+    <h2>Services <code>GET /api/services</code></h2>
+    <div class="scroll"><table id="services"></table></div>
+  </section>
+
+  <section>
+    <h2>Prove it is live: change a value in MySQL</h2>
+    <div class="how">
+      <ol>
+        <li>Keep this page open with auto-refresh on.</li>
+        <li>Open MySQL (Workbench, or the <code>mysql</code> prompt) and run the statement below.</li>
+        <li>Within a few seconds the changed cells flash yellow here. Nothing was touched in the code.</li>
+      </ol>
+    </div>
+    <pre>USE edx_slo_monitoring;
+UPDATE slo_definitions SET current_pct = 99.50, status = 'Breached' WHERE slo_id = 'SLO-API-SUCCESS-001';
+-- Now "SLI reconciled" turns to NO, because 99.50 no longer matches the sample counts.
+UPDATE measurement_snapshots SET successful_count = 999500 WHERE slo_id = 'SLO-API-SUCCESS-001';
+-- sli_pct changes to 99.9500 automatically (MySQL computes it).
+INSERT INTO reviewers (display_name) VALUES ('Test Reviewer');   -- row count for reviewers goes up
+-- To put the demo data back:  python load_sql.py</pre>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const prev = new Map();            // "table|rowKey|column" -> last text, to flash only real changes
+let firstLoad = true, timer = null;
+
+async function get(path) {
+  const r = await fetch(path, {headers: {Accept: 'application/json'}});
+  if (!r.ok) {
+    let msg = r.status + ' ' + r.statusText;
+    try { msg = (await r.json()).detail || msg; } catch (e) {}
+    throw new Error(path + ' → ' + msg);
+  }
+  return r.json();
+}
+
+function pillClass(text) {
+  const t = String(text);
+  if (/^(On Target|Healthy|Closed|Assurance Current)/.test(t)) return 'ok';
+  if (/(Breached|Degraded)/.test(t)) return 'bad';
+  if (/(At Risk|Awaiting|Additional|Follow-up Required|Open)/.test(t)) return 'warn';
+  if (/Review Required|Evidence Returned/.test(t)) return 'info';
+  return 'neutral';
+}
+
+function fmtCell(value, kind) {
+  if (value === null || value === undefined) return '—';
+  if (kind === 'bool') return value ? 'YES' : 'NO';
+  if (kind === 'pct') return Number(value).toFixed(2) + '%';
+  if (kind === 'pct4') return Number(value).toFixed(4) + '%';
+  if (kind === 'x') return Number(value).toFixed(2) + 'x';
+  if (kind === 'time') return String(value).replace('T', ' ').replace('Z', ' UTC');
+  return String(value);
+}
+
+// columns: [header, getter(row), kind]
+function renderTable(table, name, columns, rows, keyOf) {
+  table.replaceChildren();
+  const head = table.createTHead().insertRow();
+  columns.forEach(c => { const th = document.createElement('th'); th.textContent = c[0]; head.appendChild(th); });
+  const body = table.createTBody();
+  if (!rows.length) {
+    const td = body.insertRow().insertCell(); td.colSpan = columns.length; td.textContent = 'No rows.'; td.className = 'muted';
+  }
+  rows.forEach(row => {
+    const tr = body.insertRow();
+    columns.forEach(([title, getter, kind]) => {
+      const td = tr.insertCell();
+      const text = fmtCell(getter(row), kind);
+      if (kind === 'pill') { const s = document.createElement('span'); s.className = 'badge ' + pillClass(text); s.textContent = text; td.appendChild(s); }
+      else td.textContent = text;
+      if (kind === 'wrap') td.className = 'wrap';
+      const key = name + '|' + keyOf(row) + '|' + title;
+      if (!firstLoad && prev.has(key) && prev.get(key) !== text) td.classList.add('flash');
+      prev.set(key, text);
+    });
+  });
+}
+
+function renderHealth(h) {
+  const box = $('health'); box.replaceChildren();
+  const facts = [['API status', h.status], ['Database', h.database],
+                 ['Server time (UTC)', h.server_time_utc.replace('T', ' ').replace('Z', '')]]
+    .concat(Object.entries(h.row_counts).map(([t, n]) => ['rows: ' + t, n]));
+  facts.forEach(([label, value]) => {
+    const d = document.createElement('div'); d.className = 'fact';
+    const b = document.createElement('b'); b.textContent = label;
+    const s = document.createElement('span'); s.textContent = value;
+    const key = 'health|' + label;
+    if (!firstLoad && prev.has(key) && prev.get(key) !== String(value) && label !== 'Server time (UTC)') d.classList.add('flash');
+    prev.set(key, String(value));
+    d.append(b, s); box.appendChild(d);
+  });
+}
+
+async function load() {
+  try {
+    const [health, slos, followups, history, services] = await Promise.all([
+      get('/api/health'), get('/api/slos'), get('/api/followups'), get('/api/governance-history?limit=15'), get('/api/services')]);
+    $('err').style.display = 'none';
+    $('conn').className = 'badge ok'; $('conn').textContent = 'connected to ' + health.database;
+    renderHealth(health);
+    renderTable($('slos'), 'slos', [
+      ['SLO', r => r.slo_id], ['Name', r => r.name], ['Service', r => r.service_name], ['Target', r => r.target_display],
+      ['Reported', r => r.current_pct, 'pct'], ['SLI (from counts)', r => r.sli_pct, 'pct4'], ['SLI reconciled', r => r.sli_reconciled === null ? null : !!r.sli_reconciled, 'bool'],
+      ['Status', r => r.status, 'pill'], ['Budget left', r => r.error_budget_remaining_pct, 'pct'],
+      ['Burn 1h', r => r.burn_1h, 'x'], ['Burn 6h', r => r.burn_6h, 'x'], ['Burn 24h', r => r.burn_24h, 'x'],
+      ['Excluded', r => r.excluded_count], ['Exclusion evidence missing', r => r.exclusion_evidence_missing === null ? null : !!r.exclusion_evidence_missing, 'bool'],
+      ['Evidence quality', r => r.quality]], slos, r => r.slo_id);
+    renderTable($('followups'), 'followups', [
+      ['ID', r => r.id], ['SLO', r => r.slo_id], ['Priority', r => r.priority], ['Status', r => r.status, 'pill'],
+      ['Specialist owner', r => r.specialist_owner], ['Due', r => r.due_at, 'time'],
+      ['Specialist evidence', r => r.source_returned_evidence], ['Reviewer', r => r.independent_reviewer],
+      ['Review rounds', r => r.review_rounds.length]], followups, r => r.id);
+    renderTable($('history'), 'history', [
+      ['ID', r => r.history_id], ['Domain', r => r.domain], ['Subject', r => r.subject, 'wrap'], ['Decision', r => r.decision, 'wrap'],
+      ['Status', r => r.status, 'pill'], ['Recorded', r => r.recorded_at, 'time']], history, r => r.history_id);
+    renderTable($('services'), 'services', [
+      ['Service', r => r.service_id], ['Name', r => r.name], ['Tier', r => r.tier], ['Status', r => r.status, 'pill'],
+      ['Customer impact', r => r.customer_impact, 'wrap']], services, r => r.service_id);
+    $('stamp').textContent = 'last fetched ' + new Date().toLocaleTimeString();
+    firstLoad = false;
+  } catch (e) {
+    $('conn').className = 'badge bad'; $('conn').textContent = 'NOT connected';
+    const box = $('err'); box.style.display = 'block';
+    box.textContent = 'Could not load data: ' + e.message + ' — is the API running and is MySQL started?';
+  }
+}
+
+function schedule() {
+  clearInterval(timer);
+  const ms = Number($('interval').value);
+  if (ms) timer = setInterval(load, ms);
+}
+$('interval').addEventListener('change', schedule);
+$('refresh').addEventListener('click', load);
+load(); schedule();
+</script>
+</body>
+</html>
